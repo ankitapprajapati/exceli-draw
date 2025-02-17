@@ -2,6 +2,7 @@ import express, { Router ,Request,Response} from 'express'
 import jwt from 'jsonwebtoken'
 import { jwtSecret } from '@repo/jwt-backend/config'
 import { signinSchema } from '@repo/zod-common/types'
+import { prismaClient } from '@repo/db/client'
 
 export const userRouter:Router = express.Router()
 
