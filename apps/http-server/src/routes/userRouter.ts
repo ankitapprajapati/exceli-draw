@@ -4,7 +4,7 @@ import { jwtSecret } from '@repo/jwt-backend/config'
 import { signinSchema } from '@repo/zod-common/types'
 import { prismaClient } from '@repo/db/client'
 
-export const userRouter:Router = express.Router()
+export const userRouter:Router = express.Router( )
 
 const generateToken = async( email:string )=>{
     try{
