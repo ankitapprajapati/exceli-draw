@@ -1,15 +1,15 @@
 import express, { Router ,Request,Response} from 'express'
 import jwt from 'jsonwebtoken'
 import { jwtSecret } from '@repo/jwt-backend/config'
-import { signinSchema } from '@repo/zod-common/types'
+import { signinSchema, signupSchema } from '@repo/zod-common/types'
 import { prismaClient } from '@repo/db/client'
 
 export const userRouter:Router = express.Router( )
 
-const generateToken = async( email:string )=>{
+const generateToken = async( email:string , id?:string )=>{
     try{
-        // fetch userId from db through email
-        const userId = 1;
+
+        let userId = id ;
 
         if(!jwtSecret) throw new Error("JWT secret key is undefined. Check your environment variables.");
         const token = jwt.sign( { userId } , jwtSecret , {expiresIn:"24h"} );
@@ -24,65 +24,80 @@ const generateToken = async( email:string )=>{
     }
 }
 
-userRouter.get("/signin",async(req:Request,res:Response)=>{
+userRouter.post("/signin",async(req:Request,res:Response)=>{
     try{
-        const {email,password}= req.body;
 
-        const data = signinSchema.safeParse(req.body)
-        if( !data.success ){
+        const parsedData = signinSchema.safeParse(req.body)
+        if( !parsedData.success ){
             res.json({
-                message:"incorrect input"
+                message:"incorrect credential's"
             })
             return;
         }
 
-        // find email in db DOES USER EXIST
+        //------------user fetch from db------------
+        const user =await prismaClient.user.findUnique({
+            where   :   {email : parsedData.data?.email},
+            select  :   { id:true , password:true }
+        })
 
-       
-            const token = await generateToken( email );
-
+        // --------------user exist----------------
+        if ( !user ){
             res.json({
-                token:token
+                message   :   "user not found"
             })
-        // }
-        // else{ 
-            // res.json({
-            //     message:"password is incorrrect"
-            // })
-        // }
-    }
-    catch(e){
-        console.error("Error generating token:", e);
-        throw new Error("Failed to generate token. Please try again later.");
-    }
-})
+            return ;
+        }
 
-userRouter.get("/signup", async(req:Request,res:Response)=>{
-    try{
-        const { email,firstName,lastName,password } = req.body;
-        
-        // const hashedPassword = await bcrypt.hash(password,10)
+        // --------------------password correct -----------------
+        if( parsedData.data.password !== user.password ){
+            res.json({
+                message :   "incorrct password"
+            })
+            return;
+        }
 
-        // save to db
-        console.log({
-            message:{
-                firstName,
-                lastName,
-                email,
-                // password:hashedPassword,
-            }
-        }) 
-
-        const token = await generateToken( email );
-
+       //-----------------get toekn and send-----------
+        const token = await generateToken( user.id );
         res.json({
             token:token
         })
     }
     catch(e){
-        console.log(e)
-        res.json({
-            message:"account not created"
+        console.error("Error signin :", e);
+        throw new Error("Failed to signin . Please try again later.");
+    }
+})
+
+userRouter.post("/signup", async(req:Request,res:Response)=>{
+    try{
+        const parsedData = signupSchema.safeParse(req.body);        
+        
+        if ( !parsedData.success ){
+            res.json( {
+                message : " invalid input "
+            } )
+            return;
+        }
+
+        //--------------create acount---------------
+        const user = await prismaClient.user.create({
+            data : {
+                email        : parsedData.data?.email,
+                password     : parsedData.data?.password,
+                firstName    :   parsedData.data?.firstName,
+                lastName     : parsedData.data?.lastName
+            }
         })
+
+        // ----------------get token and send--------------
+        const token = await generateToken( "email" , user.id );
+        res.json({
+            token:token
+        })
+    }
+    catch(e){
+        console.error("Error signup :", e);
+        throw new Error("Failed to signup . Please try again later.");
     }
 })
