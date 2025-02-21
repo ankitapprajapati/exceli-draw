@@ -1,0 +1,47 @@
+import express, { Response, Request, Router, NextFunction } from 'express'
+import { authMiddleWare } from '../middleware/authMiddleware';
+import { prismaClient } from '@repo/db/client';
+import { createRoomSchema } from '@repo/zod-common/types';
+
+export const roomRouter:Router = express.Router();
+
+roomRouter.post( "/create-room",authMiddleWare, async (req:Request, res:Response, next:NextFunction)=>{
+
+    const parsedData = createRoomSchema.safeParse(req.body)
+    if( !parsedData.success ){
+        res.json({
+            message : "Incorrect input"
+        })
+        return
+    }
+
+    const userId = req.userId
+
+    try{
+        // -------- is roomName taken---------------
+        const room = await prismaClient.room.findUnique({
+            where    :  { slug : parsedData.data.roomName},
+            select   :  { slug : true }
+        })
+        if( room ){
+            res.json({
+                message  :  "room-name not avaible"
+            })
+            return;
+        }
+
+        // --------------create room ---------------
+        const user = await prismaClient.room.create({
+            data :  {
+                slug        :    parsedData.data.roomName,
+                adminId     :    userId
+            }
+        })
+        res.json({
+            message : parsedData.data.roomName
+        })
+    }
+    catch(e){
+        next(e)
+    }
+})

@@ -1,4 +1,4 @@
-import express, { Router ,Request,Response} from 'express'
+import express, { Router ,Request,Response, NextFunction} from 'express'
 import jwt from 'jsonwebtoken'
 import { jwtSecret } from '@repo/jwt-backend/config'
 import { signinSchema, signupSchema } from '@repo/zod-common/types'
@@ -69,7 +69,7 @@ userRouter.post("/signin",async(req:Request,res:Response)=>{
     }
 })
 
-userRouter.post("/signup", async(req:Request,res:Response)=>{
+userRouter.post("/signup", async(req:Request,res:Response, next:NextFunction)=>{
     try{
         const parsedData = signupSchema.safeParse(req.body);        
         
@@ -77,6 +77,18 @@ userRouter.post("/signup", async(req:Request,res:Response)=>{
             res.json( {
                 message : " invalid input "
             } )
+            return;
+        }
+
+        // -----------email taken or not ------------
+        const userEmail = await prismaClient.user.findUnique({
+            where    :  { email : parsedData.data.email},
+            select   :  { email : true }
+        })
+        if( userEmail ){
+            res.json({
+                message  :  "Already have account"
+            })
             return;
         }
 
@@ -96,8 +108,7 @@ userRouter.post("/signup", async(req:Request,res:Response)=>{
             token:token
         })
     }
-    catch(e){
-        console.error("Error signup :", e);
-        throw new Error("Failed to signup . Please try again later.");
+    catch(e:any){
+        next( e )
     }
 })
