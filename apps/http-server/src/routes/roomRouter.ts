@@ -38,10 +38,19 @@ roomRouter.post( "/create-room",authMiddleWare, async (req:Request, res:Response
             }
         })
         res.json({
-            message : parsedData.data.roomName
+            roomId : user.id
         })
     }
     catch(e){
         next(e)
     }
+})
+
+roomRouter.get( "/chat/:roomId",authMiddleWare,async (req:Request,res:Response)=>{
+    const roomId = Number(req.params.roomId)
+    const messages = await prismaClient.chat.findMany({
+        where : { roomId : roomId},
+        take  : 50,
+        orderBy :{ createdAt : "desc"}
+    })
 })

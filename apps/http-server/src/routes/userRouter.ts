@@ -6,7 +6,7 @@ import { prismaClient } from '@repo/db/client'
 
 export const userRouter:Router = express.Router( )
 
-const generateToken = async( email:string , id?:string )=>{
+const generateToken = async( id:string )=>{
     try{
 
         let userId = id ;
@@ -103,7 +103,7 @@ userRouter.post("/signup", async(req:Request,res:Response, next:NextFunction)=>{
         })
 
         // ----------------get token and send--------------
-        const token = await generateToken( "email" , user.id );
+        const token = await generateToken( user.id );
         res.json({
             token:token
         })
