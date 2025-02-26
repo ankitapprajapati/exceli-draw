@@ -30,7 +30,7 @@ userRouter.post("/signin",async(req:Request,res:Response)=>{
         const parsedData = signinSchema.safeParse(req.body)
         if( !parsedData.success ){
             res.json({
-                message:"incorrect credential's"
+                message:"incorrect format"
             })
             return;
         }
@@ -52,7 +52,7 @@ userRouter.post("/signin",async(req:Request,res:Response)=>{
         // --------------------password correct -----------------
         if( parsedData.data.password !== user.password ){
             res.json({
-                message :   "incorrct password"
+                message :   "wrong password"
             })
             return;
         }
@@ -72,10 +72,9 @@ userRouter.post("/signin",async(req:Request,res:Response)=>{
 userRouter.post("/signup", async(req:Request,res:Response, next:NextFunction)=>{
     try{
         const parsedData = signupSchema.safeParse(req.body);        
-        
         if ( !parsedData.success ){
             res.json( {
-                message : " invalid input "
+                message : parsedData.error.errors[0]?.message
             } )
             return;
         }
@@ -91,6 +90,7 @@ userRouter.post("/signup", async(req:Request,res:Response, next:NextFunction)=>{
             })
             return;
         }
+
 
         //--------------create acount---------------
         const user = await prismaClient.user.create({
