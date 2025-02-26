@@ -11,7 +11,7 @@ if( !jwtSecret ) throw new Error ( "jwtSEcret not found ")
 interface User {
   userId  :   string,
   ws      :   WebSocket,
-  rooms   :   string[]
+  rooms   :   number[]
 }
 
 const users : User[] = []
@@ -39,10 +39,10 @@ function checkUser(token: string) {
   }
 }
 
-async function roomExist( roomName : string ){
+async function roomExist( roomId : number ){
   try{
     const room = await prismaClient.room.findUnique({
-      where   :  {  slug : roomName  },
+      where   :  {  id : roomId },
       select  :  { id : true, slug:true },
     })
 
@@ -60,12 +60,12 @@ wss.on('connection', function connection(ws,req) {
 
 
   // -----------------------isAuthenticate-----------
-  const authToken = req.headers.authorization
-  if( !authToken || !authToken.startsWith("Bearer") ){
-    ws.close()
+  const url = req.url;
+  if(!url ){
     return
-  }
-  const token = authToken.split(' ')[1] || ""
+  }  
+  const urlParams = new URLSearchParams(url.split('?')[1])
+  const token = urlParams.get("token") || ""
   const userId = checkUser( token );
   if( !userId ){
     ws.close()
@@ -92,14 +92,16 @@ wss.on('connection', function connection(ws,req) {
 
       if( parsedData.type === "join_room"){
         
-        const roomId = await roomExist( parsedData.roomName )
+        const roomId = await roomExist( parsedData.roomId )
         if( !roomId ) {
           ws.send("room not exist")
           return;
         }
 
         const user = users.find( user => user.ws===ws )
-        user?.rooms.push( parsedData.roomName )
+        user?.rooms.push( parsedData.roomId )
+        //**********
+        console.log("room joined")
       }
 
       if( parsedData.type === "leave_room"){
@@ -112,7 +114,7 @@ wss.on('connection', function connection(ws,req) {
 
         const user = users.find( user => user.ws === ws )
         if( user ){
-          user.rooms = user.rooms.filter( r => r!==parsedData.roomName )
+          user.rooms = user.rooms.filter( r => r!==parsedData.roomId )
         }
       }
 
@@ -121,14 +123,14 @@ wss.on('connection', function connection(ws,req) {
         // user have access to this room 
         const user = users.find( u => u.userId===userId )
         if( user ){
-          let subscriber = user.rooms.find( r => r===parsedData.roomName )
+          let subscriber = user.rooms.find( r => r===parsedData.roomId )
           if( !subscriber ) {
             ws.send("you have not subscription to this room")
             return;
           }
         }
 
-        const roomId = await roomExist( parsedData.roomName )
+        const roomId = await roomExist( parsedData.roomId )
         if( !roomId ) {
           ws.send("room not exist")
           return;
@@ -145,8 +147,11 @@ wss.on('connection', function connection(ws,req) {
           }
         })
 
+        //**********
+        console.log("chat come ")
+
         users.forEach( user=>{
-          if( user.userId!=userId && user.rooms.includes( roomName )){
+          if( user.rooms.includes( roomName )){
             user.ws.send( JSON.stringify({
               type  : "chat",
               message : message,
