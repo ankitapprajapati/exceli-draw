@@ -90,7 +90,7 @@ wss.on('connection', function connection(ws,req) {
         parsedData = JSON.parse( data )
       }
 
-      if( parsedData.type === "join_room"){
+      if( parsedData.type === "join_room" ){
         
         const roomId = await roomExist( parsedData.roomId )
         if( !roomId ) {
@@ -99,9 +99,15 @@ wss.on('connection', function connection(ws,req) {
         }
 
         const user = users.find( user => user.ws===ws )
-        user?.rooms.push( parsedData.roomId )
-        //**********
-        console.log("room joined")
+        if(user){
+          user.rooms.push( parsedData.roomId )
+          //**********
+          console.log(user.rooms)
+          console.log("room joined")
+        }
+        else{
+          console.log("unable to join")
+        }
       }
 
       if( parsedData.type === "leave_room"){
@@ -121,10 +127,9 @@ wss.on('connection', function connection(ws,req) {
       if( parsedData.type === "chat" ){
 
         // user have access to this room 
-        const user = users.find( u => u.userId===userId )
+        const user = users.find( user => user.ws === ws )
         if( user ){
-          let subscriber = user.rooms.find( r => r===parsedData.roomId )
-          if( !subscriber ) {
+          if( !user.rooms.includes(parsedData.roomId)) {
             ws.send("you have not subscription to this room")
             return;
           }
