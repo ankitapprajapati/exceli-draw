@@ -45,6 +45,8 @@ export default function Signin(){
         }
     }
 
+    if( loading ) return <div>Loading ....</div>
+
     return(
         <div style={{
             "display":"flex",

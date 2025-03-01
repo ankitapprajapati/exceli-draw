@@ -40,6 +40,7 @@ export default function Signin(){
         }
     }
 
+    if( loading ) return <div>Loading ....</div>
     return(
         <div>
             <h1>Sign-In</h1>
